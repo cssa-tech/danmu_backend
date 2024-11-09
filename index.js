@@ -1,61 +1,31 @@
-const path = require("path");
-const express = require("express");
-const cors = require("cors");
-const morgan = require("morgan");
-const { init: initDB, Counter } = require("./db");
+const WebSocket = require('ws');
 
-const logger = morgan("tiny");
+// 在 8080 端口创建 WebSocket 服务器
+const wss = new WebSocket.Server({ port: 8080, host: '0.0.0.0' });
 
-const app = express();
-app.use(express.urlencoded({ extended: false }));
-app.use(express.json());
-app.use(cors());
-app.use(logger);
+// 监听连接事件
+wss.on('connection', (ws) => {
+  console.log('客户端已连接');
 
-// 首页
-app.get("/", async (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
-});
+  // 监听来自客户端的消息
+  ws.on('message', (message) => {
+    console.log(`接收到的消息: ${message}`);
+    
+    // 解析弹幕内容
+    const danmu = JSON.parse(message);
 
-// 更新计数
-app.post("/api/count", async (req, res) => {
-  const { action } = req.body;
-  if (action === "inc") {
-    await Counter.create();
-  } else if (action === "clear") {
-    await Counter.destroy({
-      truncate: true,
+    // 将弹幕转发给所有连接的客户端
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify(danmu));
+      }
     });
-  }
-  res.send({
-    code: 0,
-    data: await Counter.count(),
+  });
+
+  // 监听关闭事件
+  ws.on('close', () => {
+    console.log('客户端已断开连接');
   });
 });
 
-// 获取计数
-app.get("/api/count", async (req, res) => {
-  const result = await Counter.count();
-  res.send({
-    code: 0,
-    data: result,
-  });
-});
-
-// 小程序调用，获取微信 Open ID
-app.get("/api/wx_openid", async (req, res) => {
-  if (req.headers["x-wx-source"]) {
-    res.send(req.headers["x-wx-openid"]);
-  }
-});
-
-const port = process.env.PORT || 80;
-
-async function bootstrap() {
-  await initDB();
-  app.listen(port, () => {
-    console.log("启动成功", port);
-  });
-}
-
-bootstrap();
+console.log('WebSocket 服务器在 ws://localhost:8080 上运行');
