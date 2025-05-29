@@ -47,7 +47,7 @@ $ sudo systemctl restart nginx
 ```
 网页端同理，需要注意的是如果你在一台instance上同时用nginx部署大屏幕端和手机端，你可能需要将大屏幕端的`dist`文件夹放到比如`/var/www/html/screen`中，此时需要你更改大屏幕端配置文件中的`base`并重新生成静态网页然后重新部署
 ``` javascript
-# in file vite.config.js
+// in file vite.config.js
 import { fileURLToPath, URL } from 'node:url'
 
 import { defineConfig } from 'vite'
@@ -63,5 +63,5 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
-  base: '/screen/', #add this line
+  base: '/screen/', //add this line
 })
